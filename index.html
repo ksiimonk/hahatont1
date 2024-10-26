@@ -12,6 +12,10 @@
       <button onclick="addTitle()">Add Title</button>
       <button onclick="addParagraph()">Add Paragraph</button>
       <button onclick="showTableModal()">Add Table</button>
+      <button onclick="showChartModal('bar')">Add Bar Chart</button>
+      <button onclick="showChartModal('pie')">Add Pie Chart</button>
+      <button onclick="showChartModal('histogram')">Add Histogram</button>
+
       <input
         type="file"
         accept=".csv"
@@ -36,7 +40,6 @@
       <button onclick="clearReport()">Clear Report</button>
       <button onclick="exportToPPTX()">Export to PPTX</button>
       <button onclick="exportToPDF()">Export to PDF</button>
-      <button onclick="exportToDOCX()">Export to DOCX</button>
     </div>
 
     <!-- Report Container -->
@@ -57,8 +60,21 @@
       </div>
     </div>
 
+        <!-- Modal for chart input -->
+    <div id="chartModal" class="modal">
+      <div class="modal-content">
+        <h3>Enter Chart Data</h3>
+        <label for="chartLabels">Labels (comma-separated):</label>
+        <input type="text" id="chartLabels" placeholder="Label 1, Label 2, ..." />
+        <label for="chartData">Values (comma-separated):</label>
+        <input type="text" id="chartData" placeholder="10, 20, 30, ..." />
+        <button onclick="createChart()">Create Chart</button>
+        <button onclick="closeChartModal()">Cancel</button>
+      </div>
+    </div>
+
+
     <script src="script.js"></script>
     <script src="libs/pptxgen.bundle.js"></script>
-    <script src="https://unpkg.com/docx@8.0.3/build/index.js"></script>
   </body>
 </html>

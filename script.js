@@ -7,7 +7,75 @@
   function closeTableModal() {
     document.getElementById("tableModal").style.display = "none";
   }
-  
+
+  let currentChartType = '';
+
+  // Show chart modal
+  function showChartModal(type) {
+    currentChartType = type;
+    document.getElementById('chartModal').style.display = 'flex';
+  }
+
+  // Close chart modal
+  function closeChartModal() {
+    document.getElementById('chartModal').style.display = 'none';
+    document.getElementById('chartLabels').value = '';
+    document.getElementById('chartData').value = '';
+  }
+
+  // Create chart
+  function createChart() {
+    const labels = document.getElementById('chartLabels').value.split(',');
+    const data = document.getElementById('chartData').value.split(',').map(Number);
+    if (labels.length !== data.length) {
+      alert('Labels and data must have the same length!');
+      return;
+    }
+
+    const chartContainer = document.createElement('div');
+    chartContainer.className = 'report-element';
+
+    const canvas = document.createElement('canvas');
+    chartContainer.appendChild(canvas);
+    document.getElementById('report-container').appendChild(chartContainer);
+
+    const ctx = canvas.getContext('2d');
+    const chartConfig = {
+      type: currentChartType === 'histogram' ? 'bar' : currentChartType,  // Treat histogram as bar chart
+      data: {
+        labels: labels,
+        datasets: [{
+          label: currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1) + ' Chart',
+          data: data,
+          backgroundColor: currentChartType === 'pie' ? getPieColors(labels.length) : 'rgba(75, 192, 192, 0.2)',
+          borderColor: currentChartType === 'pie' ? getPieColors(labels.length) : 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: currentChartType === 'pie' ? {} : {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    };
+
+    new Chart(ctx, chartConfig);
+    closeChartModal();
+  }
+
+  // Helper function to generate colors for pie chart
+  function getPieColors(count) {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+      const randomColor = `hsl(${Math.floor(Math.random() * 360)}, 100%, 75%)`;
+      colors.push(randomColor);
+    }
+    return colors;
+  }
+
+
   // Create table with specified rows and columns
   function createTable() {
     const rows = document.getElementById("tableRows").value;
@@ -537,40 +605,6 @@ function createButton(text, onClick) {
     document.getElementById("report-container").innerHTML = "";
   }
   
-  
-  function exportToPPTX() {
-    const pptx = new PptxGenJS();
-    const slide = pptx.addSlide();
-
-    // Перебираем все элементы отчёта и добавляем их на слайд
-    const reportElements = document.getElementById("report-container").children;
-    for (let i = 0; i < reportElements.length; i++) {
-        const element = reportElements[i];
-
-        if (element.querySelector("input")) {
-            // Элемент заголовка
-            const title = element.querySelector("input").value;
-            slide.addText(title, { x: 0.5, y: 0.5, fontSize: 18 });
-        } else if (element.querySelector("textarea")) {
-            // Элемент абзаца
-            const paragraph = element.querySelector("textarea").value;
-            slide.addText(paragraph, { x: 0.5, y: 1.5, fontSize: 14 });
-        } else if (element.querySelector("table")) {
-            // Элемент таблицы
-            const table = element.querySelector("table");
-            const tableData = [];
-            for (let row of table.rows) {
-                const rowData = Array.from(row.cells).map(cell => cell.textContent);
-                tableData.push(rowData);
-            }
-            slide.addTable(tableData, { x: 0.5, y: 2.5, fontSize: 10 });
-        }
-    }
-
-    pptx.writeFile("report.pptx").catch(err => console.error("Ошибка при экспорте в PPTX:", err));
-}
-
-
 function exportToPDF() {
     // Создаем новый контент для печати
     const reportElements = document.getElementById("report-container").children;
@@ -617,59 +651,99 @@ function exportToPDF() {
     printWindow.close();
 }
 
-function exportToDOCX() {
-    const { Document, Packer, Paragraph, Table, TableCell, TableRow } = docx;
 
-    const doc = new Document();
-    const reportElements = document.getElementById("report-container").children;
 
-    Array.from(reportElements).forEach((element) => {
-        if (element.querySelector("input")) {
-            const title = element.querySelector("input").value;
-            doc.addSection({
-                children: [
-                    new Paragraph({
-                        text: title,
-                        heading: docx.HeadingLevel.HEADING_1,
-                    }),
-                ],
-            });
-        } else if (element.querySelector("textarea")) {
-            const paragraph = element.querySelector("textarea").value;
-            doc.addSection({
-                children: [
-                    new Paragraph(paragraph),
-                ],
-            });
-        } else if (element.querySelector("table")) {
-            const table = element.querySelector("table");
-            const rows = [];
-            for (let row of table.rows) {
-                const cells = Array.from(row.cells).map(cell => new TableCell({
-                    children: [new Paragraph(cell.textContent)],
-                }));
-                rows.push(new TableRow({
-                    children: cells,
-                }));
-            }
-            doc.addSection({
-                children: [
-                    new Table({
-                        rows: rows,
-                    }),
-                ],
-            });
-        }
-    });
+function exportToPPTX() {
+  const pptx = new PptxGenJS();
+  const slide = pptx.addSlide();
 
-    Packer.toBlob(doc).then(blob => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'report.docx';  // Устанавливаем имя файла
-        document.body.appendChild(link);
-        link.click();  // Запускаем скачивание
-        document.body.removeChild(link);  // Удаляем ссылку из DOM
-    }).catch(err => {
-        console.error("Ошибка при создании файла DOCX:", err);
-    });
+  // Перебираем все элементы отчёта и добавляем их на слайд
+  const reportElements = document.getElementById("report-container").children;
+  for (let i = 0; i < reportElements.length; i++) {
+      const element = reportElements[i];
+
+      if (element.querySelector("input")) {
+          // Элемент заголовка
+          const title = element.querySelector("input").value;
+          slide.addText(title, { x: 0.5, y: 0.5, fontSize: 18 });
+      } else if (element.querySelector("textarea")) {
+          // Элемент абзаца
+          const paragraph = element.querySelector("textarea").value;
+          slide.addText(paragraph, { x: 0.5, y: 1.5, fontSize: 14 });
+      } else if (element.querySelector("table")) {
+          // Элемент таблицы
+          const table = element.querySelector("table");
+          const tableData = [];
+          for (let row of table.rows) {
+              const rowData = Array.from(row.cells).map(cell => cell.textContent);
+              tableData.push(rowData);
+          }
+          slide.addTable(tableData, { x: 0.5, y: 2.5, fontSize: 10 });
+      }
+  }
+
+  pptx.writeFile("report.pptx").catch(err => console.error("Ошибка при экспорте в PPTX:", err));
 }
+
+// Create chart
+function createChart() {
+  const labels = document.getElementById('chartLabels').value.split(',');
+  const data = document.getElementById('chartData').value.split(',').map(Number);
+  if (labels.length !== data.length) {
+    alert('Labels and data must have the same length!');
+    return;
+  }
+
+  const chartContainer = document.createElement('div');
+  chartContainer.className = 'report-element';
+
+  const canvas = document.createElement('canvas');
+  chartContainer.appendChild(canvas);
+  document.getElementById('report-container').appendChild(chartContainer);
+
+  const ctx = canvas.getContext('2d');
+  const chartConfig = {
+    type: currentChartType === 'histogram' ? 'bar' : currentChartType,  // Treat histogram as bar chart
+    data: {
+      labels: labels,
+      datasets: [{
+        label: currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1) + ' Chart',
+        data: data,
+        backgroundColor: currentChartType === 'pie' ? getPieColors(labels.length) : 'rgba(75, 192, 192, 0.2)',
+        borderColor: currentChartType === 'pie' ? getPieColors(labels.length) : 'rgba(75, 192, 192, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: currentChartType === 'pie' ? {} : {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  };
+
+  const chart = new Chart(ctx, chartConfig);
+
+  // Add "Copy Chart" button
+  const copyButton = document.createElement('button');
+  copyButton.textContent = 'Copy Chart';
+  copyButton.onclick = () => copyChartToClipboard(canvas);
+  chartContainer.appendChild(copyButton);
+
+  closeChartModal();
+}
+
+// Function to copy chart to clipboard
+async function copyChartToClipboard(canvas) {
+  try {
+    const blob = await new Promise(resolve => canvas.toBlob(resolve));
+    const item = new ClipboardItem({ 'image/png': blob });
+    await navigator.clipboard.write([item]);
+    alert('Chart copied to clipboard!');
+  } catch (error) {
+    console.error('Error copying chart:', error);
+    alert('Failed to copy the chart.');
+  }
+}
+
